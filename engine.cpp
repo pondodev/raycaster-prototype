@@ -46,6 +46,12 @@ Engine::Engine( std::string map_path, std::string wall_tex_path ) {
         throw "zoinks scoobs!";
     }
 
+    player = Player {
+        Vec2 { 2.0, 7.0 },
+        1.0,
+        M_PI / 3.0
+    };
+
     // draw map
     int rect_w, rect_h;
     rect_w = WINDOW_WIDTH / (map_width * 2);
@@ -76,14 +82,6 @@ Engine::Engine( std::string map_path, std::string wall_tex_path ) {
         }
     }
 
-    // draw player on map
-    player = Player {
-        Vec2 { 2.0, 7.0 },
-        1.0,
-        M_PI / 3.0
-    };
-    draw_rect( player.position.x * rect_w, player.position.y * rect_h, 5, 5, Color( 0xFFFFFFFF ) );
-
     // clear the 3d view
     draw_rect( WINDOW_WIDTH / 2, 0, WINDOW_WIDTH / 2, WINDOW_HEIGHT, Color( 0xBBBBBBFF ) );
 
@@ -99,10 +97,23 @@ Engine::Engine( std::string map_path, std::string wall_tex_path ) {
             if ( tile != Floor ) {
                 auto color = wall_textures[ wall_tex_size * tile ];
                 int column_height = WINDOW_HEIGHT / (ray_dist * cos(angle - player.view_angle));
-                int col_x, col_y;
-                col_x = WINDOW_WIDTH / 2 + i;
-                col_y = WINDOW_HEIGHT / 2 - column_height / 2;
-                draw_rect( col_x, col_y, 1, column_height, color );
+                float hit_x = cx - floor( cx + .5 );
+                float hit_y = cy - floor( cy + .5 );
+                int x_texcoord = hit_x * wall_tex_size;
+                if ( abs( hit_y ) > std::abs( hit_x ) ) { // check if vertical or horizontal wall
+                    x_texcoord = hit_y * wall_tex_size;
+                }
+
+                if ( x_texcoord < 0 ) x_texcoord += wall_tex_size;
+
+                auto column = get_tex_column( column_height, tile, x_texcoord );
+                int pixel_x = WINDOW_WIDTH / 2 + i;
+                for ( int j = 0; j < column_height; j++ ) {
+                    int pixel_y = j + WINDOW_HEIGHT / 2 - column_height / 2;
+                    if ( pixel_y < 0 || pixel_y >= WINDOW_HEIGHT ) continue;
+                    framebuffer[ pixel_x + pixel_y * WINDOW_WIDTH ] = column[ j ];
+                }
+
                 break;
             }
 
@@ -140,6 +151,21 @@ void Engine::draw_rect( int x, int y, int w, int h, Color color ) {
             framebuffer[ cx + cy * WINDOW_WIDTH ] = color;
         }
     }
+}
+
+std::vector<Color> Engine::get_tex_column( size_t col_height, int tex_index, int tex_x ) {
+    size_t img_w, img_h;
+    img_w = wall_tex_size * wall_tex_count;
+    img_h = wall_tex_size;
+    std::vector<Color> column( col_height );
+    for ( int y = 0; y < col_height; y++ ) {
+        size_t pixel_x, pixel_y;
+        pixel_x = tex_index * wall_tex_size + tex_x;
+        pixel_y = (y * wall_tex_size) / col_height;
+        column[ y ] = wall_textures[ pixel_x + pixel_y * img_w ];
+    }
+
+    return column;
 }
 
 bool Engine::load_image( std::string tex_file_path ) {
