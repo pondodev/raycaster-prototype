@@ -33,7 +33,7 @@ Engine::Engine( std::string map_path ) {
 
     // draw map
     int rect_w, rect_h;
-    rect_w = WINDOW_WIDTH / map_width;
+    rect_w = WINDOW_WIDTH / (map_width * 2);
     rect_h = WINDOW_HEIGHT / map_height;
     for ( int y = 0; y < map_height; y++ ) {
         for ( int x = 0; x < map_width; x++ ) {
@@ -67,13 +67,25 @@ Engine::Engine( std::string map_path ) {
     };
     draw_rect( player.position.x * rect_w, player.position.y * rect_h, 5, 5, Color( 0xFFFFFFFF ) );
 
-    // draw view cone
-    for ( float i = 0; i < WINDOW_WIDTH; i++ ) {
-        float angle = player.view_angle - player.fov / 2 + player.fov * i / float(WINDOW_WIDTH);
-        for ( float t = 0; t < 20; t += .05 ) {
-            float cx = player.position.x + t * cos( angle );
-            float cy = player.position.y + t * sin( angle );
-            if ( map[ int(cx) + int(cy) * map_width ] == Wall ) break;
+    // clear the 3d view
+    draw_rect( WINDOW_WIDTH / 2, 0, WINDOW_WIDTH / 2, WINDOW_HEIGHT, Color( 0xBBBBBBFF ) );
+
+    // draw view cone and 3d view
+    for ( float i = 0; i < WINDOW_WIDTH / 2; i++ ) {
+        float angle = player.view_angle - player.fov / 2 + player.fov * i / float(WINDOW_WIDTH / 2);
+        for ( float ray_dist = 0; ray_dist < 20; ray_dist += .05 ) {
+            float cx = player.position.x + ray_dist * cos( angle );
+            float cy = player.position.y + ray_dist * sin( angle );
+
+            // the 3d magic!
+            if ( map[ int(cx) + int(cy) * map_width ] != Floor ) {
+                int column_height = WINDOW_HEIGHT / (ray_dist * cos(angle - player.view_angle));
+                int col_x, col_y;
+                col_x = WINDOW_WIDTH / 2 + i;
+                col_y = WINDOW_HEIGHT / 2 - column_height / 2;
+                draw_rect( col_x, col_y, 1, column_height, Color( 0x222222FF ) );
+                break;
+            }
 
             int pixel_x, pixel_y;
             pixel_x = cx * rect_w;
