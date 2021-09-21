@@ -1,6 +1,8 @@
 #include "engine.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
-Engine::Engine( std::string map_path ) {
+Engine::Engine( std::string map_path, std::string wall_tex_path ) {
     // read in map
     std::fstream f;
     f.open( map_path, std::ios::in );
@@ -20,16 +22,29 @@ Engine::Engine( std::string map_path ) {
                 break;
 
             case '#':
-                map.push_back( Wall );
+                map.push_back( Wall1 );
+                break;
+
+            case '$':
+                map.push_back( Wall2 );
+                break;
+
+            case '%':
+                map.push_back( Wall3 );
                 break;
 
             default:
+                map.push_back( Floor );
                 std::cerr << "unrecognised tile: " << tile << std::endl;
                 break;
         }
     }
 
     f.close();
+
+    if ( !load_image( wall_tex_path ) ) {
+        throw "zoinks scoobs!";
+    }
 
     // draw map
     int rect_w, rect_h;
@@ -43,8 +58,10 @@ Engine::Engine( std::string map_path ) {
                     col = Color( 0xBBBBBBFF );
                     break;
 
-                case Wall:
-                    col = Color( 0x222222FF );
+                case Wall1:
+                case Wall2:
+                case Wall3:
+                    col = wall_textures[ wall_tex_size * map[ x + y * map_width ] ];
                     break;
 
                 default:
@@ -73,24 +90,26 @@ Engine::Engine( std::string map_path ) {
     // draw view cone and 3d view
     for ( float i = 0; i < WINDOW_WIDTH / 2; i++ ) {
         float angle = player.view_angle - player.fov / 2 + player.fov * i / float(WINDOW_WIDTH / 2);
-        for ( float ray_dist = 0; ray_dist < 20; ray_dist += .05 ) {
+        for ( float ray_dist = 0; ray_dist < 20; ray_dist += .01 ) {
             float cx = player.position.x + ray_dist * cos( angle );
             float cy = player.position.y + ray_dist * sin( angle );
 
             // the 3d magic!
-            if ( map[ int(cx) + int(cy) * map_width ] != Floor ) {
+            auto tile = map[ int(cx) + int(cy) * map_width ];
+            if ( tile != Floor ) {
+                auto color = wall_textures[ wall_tex_size * tile ];
                 int column_height = WINDOW_HEIGHT / (ray_dist * cos(angle - player.view_angle));
                 int col_x, col_y;
                 col_x = WINDOW_WIDTH / 2 + i;
                 col_y = WINDOW_HEIGHT / 2 - column_height / 2;
-                draw_rect( col_x, col_y, 1, column_height, Color( 0x222222FF ) );
+                draw_rect( col_x, col_y, 1, column_height, color );
                 break;
             }
 
             int pixel_x, pixel_y;
             pixel_x = cx * rect_w;
             pixel_y = cy * rect_h;
-            framebuffer[ pixel_x + pixel_y * WINDOW_WIDTH ] = Color( 0xDD4444FF );
+            framebuffer[ pixel_x + pixel_y * WINDOW_WIDTH ] = Color( 0xDD5555FF );
         }
     }
 }
@@ -121,4 +140,41 @@ void Engine::draw_rect( int x, int y, int w, int h, Color color ) {
             framebuffer[ cx + cy * WINDOW_WIDTH ] = color;
         }
     }
+}
+
+bool Engine::load_image( std::string tex_file_path ) {
+    int nchannels = -1, w, h;
+    unsigned char* pixmap = stbi_load( tex_file_path.c_str(), &w, &h, &nchannels, 0 );
+    if ( !pixmap ) {
+        std::cerr << "failed to load texture" << std::endl;
+        return false;
+    }
+
+    if ( nchannels != 4 ) {
+        std::cerr << "texture must be a 32 bit image" << std::endl;
+        stbi_image_free( pixmap );
+        return false;
+    }
+
+    wall_tex_count = w / h;
+    wall_tex_size = w / wall_tex_count;
+    if ( w != h * int(wall_tex_count) ) {
+        std::cerr << "the texture file must contain N square textures packed horizontally" << std::endl;
+        return false;
+    }
+
+    wall_textures = std::vector<Color>( w * h );
+    for ( int i = 0; i < wall_textures.size(); i++ ) {
+        int root_index = i * 4;
+        int r, g, b, a;
+        r = pixmap[ root_index ];
+        g = pixmap[ root_index + 1 ];
+        b = pixmap[ root_index + 2 ];
+        a = pixmap[ root_index + 3 ];
+
+        wall_textures[ i ] = Color( r, g, b, a );
+    }
+
+    stbi_image_free( pixmap );
+    return true;
 }
