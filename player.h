@@ -5,6 +5,8 @@
 
 struct Player {
     Vec2 position;
+    float view_angle;
+    float fov;
 };
 
 #endif

@@ -10,6 +10,7 @@
 #include <string>
 #include <cstdint>
 #include <vector>
+#include <cmath>
 
 #include "color.h"
 #include "player.h"

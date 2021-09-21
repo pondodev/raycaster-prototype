@@ -1,19 +1,6 @@
 #include "engine.h"
 
 Engine::Engine( std::string map_path ) {
-    // temp coord space drawing
-    for ( int y = 0; y < WINDOW_HEIGHT; y++ ) {
-        for ( int x = 0; x < WINDOW_WIDTH; x++ ) {
-            uint8_t r, g, b, a;
-            r = 255 * x / float(WINDOW_WIDTH);
-            g = 255 * y / float(WINDOW_HEIGHT);
-            b = 0;
-            a = 0;
-
-            framebuffer[ x + y * WINDOW_WIDTH ] = Color( r, g, b, a );
-        }
-    }
-
     // read in map
     std::fstream f;
     f.open( map_path, std::ios::in );
@@ -50,18 +37,50 @@ Engine::Engine( std::string map_path ) {
     rect_h = WINDOW_HEIGHT / map_height;
     for ( int y = 0; y < map_height; y++ ) {
         for ( int x = 0; x < map_width; x++ ) {
-            if ( map[ x + y * map_width ] == Floor ) continue;
+            Color col;
+            switch ( map[ x + y * map_width ] ) {
+                case Floor:
+                    col = Color( 0xBBBBBBFF );
+                    break;
+
+                case Wall:
+                    col = Color( 0x222222FF );
+                    break;
+
+                default:
+                    col = Color( 0x00FFFFFF );
+                    break;
+            }
 
             int rect_x, rect_y;
             rect_x = x * rect_w;
             rect_y = y * rect_h;
-            draw_rect( rect_x, rect_y, rect_w, rect_h, Color( 0x000000FF ) );
+            draw_rect( rect_x, rect_y, rect_w, rect_h, col );
         }
     }
 
     // draw player on map
-    player.position = Vec2 { 2.0, 7.0 };
+    player = Player {
+        Vec2 { 2.0, 7.0 },
+        1.0,
+        M_PI / 3.0
+    };
     draw_rect( player.position.x * rect_w, player.position.y * rect_h, 5, 5, Color( 0xFFFFFFFF ) );
+
+    // draw view cone
+    for ( float i = 0; i < WINDOW_WIDTH; i++ ) {
+        float angle = player.view_angle - player.fov / 2 + player.fov * i / float(WINDOW_WIDTH);
+        for ( float t = 0; t < 20; t += .05 ) {
+            float cx = player.position.x + t * cos( angle );
+            float cy = player.position.y + t * sin( angle );
+            if ( map[ int(cx) + int(cy) * map_width ] == Wall ) break;
+
+            int pixel_x, pixel_y;
+            pixel_x = cx * rect_w;
+            pixel_y = cy * rect_h;
+            framebuffer[ pixel_x + pixel_y * WINDOW_WIDTH ] = Color( 0xDD4444FF );
+        }
+    }
 }
 
 void Engine::draw_to_ppm( std::string path ) {
