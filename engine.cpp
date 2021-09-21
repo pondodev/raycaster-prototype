@@ -55,9 +55,13 @@ Engine::Engine( std::string map_path ) {
             int rect_x, rect_y;
             rect_x = x * rect_w;
             rect_y = y * rect_h;
-            draw_rect( rect_x, rect_y, rect_w, rect_h, Color( 0x00000000 ) );
+            draw_rect( rect_x, rect_y, rect_w, rect_h, Color( 0x000000FF ) );
         }
     }
+
+    // draw player on map
+    player.position = Vec2 { 2.0, 7.0 };
+    draw_rect( player.position.x * rect_w, player.position.y * rect_h, 5, 5, Color( 0xFFFFFFFF ) );
 }
 
 void Engine::draw_to_ppm( std::string path ) {

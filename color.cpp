@@ -1,7 +1,7 @@
 #include "color.h"
 
 Color::Color() {
-    set_hex( 0x00000000 );
+    set_hex( 0x000000FF );
 }
 
 Color::Color( uint32_t hex ) {

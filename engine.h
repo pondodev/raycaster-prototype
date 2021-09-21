@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "color.h"
+#include "player.h"
 
 enum MapTile {
     Floor,
@@ -28,6 +29,7 @@ private:
     std::vector<MapTile> map;
     unsigned int map_width;
     unsigned int map_height;
+    Player player;
 
     void draw_rect( int x, int y, int w, int h, Color color );
 };
