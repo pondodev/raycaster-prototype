@@ -52,6 +52,12 @@ Engine::Engine( std::string map_path, std::string wall_tex_path ) {
         M_PI / 3.0
     };
 
+    enemies = {
+        Enemy { Vec2 { 2.5, 9.0 }, 0 },
+        Enemy { Vec2 { 5.0, 10.0 }, 0 },
+        Enemy { Vec2 { 5.5, 9.0 }, 0 }
+    };
+
     // draw map
     int rect_w, rect_h;
     rect_w = WINDOW_WIDTH / (map_width * 2);
@@ -120,8 +126,14 @@ Engine::Engine( std::string map_path, std::string wall_tex_path ) {
             int pixel_x, pixel_y;
             pixel_x = cx * rect_w;
             pixel_y = cy * rect_h;
-            framebuffer[ pixel_x + pixel_y * WINDOW_WIDTH ] = Color( 0xDD5555FF );
+            framebuffer[ pixel_x + pixel_y * WINDOW_WIDTH ] = Color( 0x5555DDFF );
         }
+    }
+
+    // draw the enemies
+    for ( auto e : enemies ) {
+        draw_rect( e.position.x * rect_w, e.position.y * rect_h, 5, 5, Color( 0xFF0000FF ) );
+        draw_sprite( e );
     }
 }
 
@@ -203,4 +215,26 @@ bool Engine::load_image( std::string tex_file_path ) {
 
     stbi_image_free( pixmap );
     return true;
+}
+
+void Engine::draw_sprite( Enemy enemy ) {
+    float dir = atan2( enemy.position.y - player.position.y, enemy.position.x - player.position.x );
+    while ( dir - player.view_angle > M_PI ) dir -= 2 * M_PI;
+    while ( dir - player.view_angle < -M_PI ) dir += 2 * M_PI;
+
+    float dist = sqrt( pow( player.position.x - enemy.position.x, 2 ) ) + pow( player.position.y - enemy.position.y, 2 );
+    size_t size = std::min( 2000, static_cast<int>( WINDOW_HEIGHT / dist ) );
+    int h_offset = (dir - player.view_angle) * (WINDOW_WIDTH / 2) / player.fov + (WINDOW_WIDTH / 2) / 2 - size / 2;
+    int v_offset = WINDOW_HEIGHT / 2 - size / 2;
+
+    for ( int i = 0; i < size; i++ ) {
+        if ( h_offset + i < 0 || h_offset + i >= WINDOW_WIDTH / 2 ) continue;
+        for ( int j = 0; j < size; j++ ) {
+            if ( v_offset + j < 0 || v_offset + j >= WINDOW_HEIGHT ) continue;
+            int x, y;
+            x = WINDOW_WIDTH / 2 + h_offset + i;
+            y = v_offset + j;
+            framebuffer[ x + y * WINDOW_WIDTH ] = Color( 0x000000FF );
+        }
+    }
 }

@@ -14,6 +14,7 @@
 
 #include "color.h"
 #include "player.h"
+#include "enemy.h"
 
 enum MapTile {
     Floor = -1,
@@ -37,10 +38,12 @@ private:
     std::vector<Color> wall_textures;
     size_t wall_tex_size;
     size_t wall_tex_count;
+    std::vector<Enemy> enemies;
 
     void draw_rect( int x, int y, int w, int h, Color color );
     std::vector<Color> get_tex_column( size_t col_height, int tex_index, int tex_x );
     bool load_image( std::string tex_file_path );
+    void draw_sprite( Enemy enemy );
 };
 
 #endif
