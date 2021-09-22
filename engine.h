@@ -15,6 +15,7 @@
 #include "color.h"
 #include "player.h"
 #include "enemy.h"
+#include "texture.h"
 
 enum MapTile {
     Floor = -1,
@@ -26,7 +27,7 @@ enum MapTile {
 
 class Engine {
 public:
-    Engine( std::string map_path, std::string wall_tex_path );
+    Engine( std::string map_path, std::string wall_tex_path, std::string enemy_tex_path );
     void draw_to_ppm( std::string path );
 
 private:
@@ -35,15 +36,12 @@ private:
     unsigned int map_width;
     unsigned int map_height;
     Player player;
-    std::vector<Color> wall_textures;
-    size_t wall_tex_size;
-    size_t wall_tex_count;
+    Texture wall_textures;
+    Texture enemy_textures;
     std::vector<Enemy> enemies;
 
     void draw_rect( int x, int y, int w, int h, Color color );
-    std::vector<Color> get_tex_column( size_t col_height, int tex_index, int tex_x );
-    bool load_image( std::string tex_file_path );
-    void draw_sprite( Enemy enemy );
+    void draw_sprite( Enemy enemy, std::vector<float> depth_buffer );
 };
 
 #endif
