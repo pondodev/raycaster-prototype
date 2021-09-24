@@ -11,6 +11,8 @@
 #include <cstdint>
 #include <vector>
 #include <cmath>
+#include <array>
+#include <algorithm>
 
 #include "color.h"
 #include "player.h"
@@ -40,10 +42,11 @@ private:
     Texture wall_textures;
     Texture enemy_textures;
     std::vector<Enemy> enemies;
+    std::array<float, WINDOW_WIDTH> depth_buffer;
 
     void clear_framebuffer( Color color );
     void draw_rect( int x, int y, int w, int h, Color color );
-    void draw_sprite( Enemy enemy, std::vector<float> depth_buffer );
+    void draw_sprite( Enemy enemy );
     void draw_pixel( int x, int y, Color color );
 
     MapTile get_map_tile( int x, int y );

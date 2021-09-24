@@ -48,6 +48,7 @@ Engine::Engine( std::string map_path, std::string wall_tex_path, std::string ene
     };
 
     enemies = {
+        Enemy { Vec2 { 4.0, 8.5 }, 2 },
         Enemy { Vec2 { 2.5, 9.0 }, 0 },
         Enemy { Vec2 { 5.0, 10.0 }, 0 },
         Enemy { Vec2 { 5.5, 9.0 }, 0 }
@@ -89,8 +90,7 @@ void Engine::render() {
     }
 
     // draw view cone and 3d view
-    std::vector<float> depth_buffer( WINDOW_WIDTH / 2, 1e3 );
-    for ( float i = 0; i < WINDOW_WIDTH / 2; i++ ) {
+    for ( int i = 0; i < WINDOW_WIDTH / 2; i++ ) {
         float angle = player.view_angle - player.fov / 2 + player.fov * i / float(WINDOW_WIDTH / 2);
         for ( float ray_dist = 0; ray_dist < 20; ray_dist += .01 ) {
             float cx = player.position.x + ray_dist * cos( angle );
@@ -130,9 +130,18 @@ void Engine::render() {
     }
 
     // draw the enemies
+    for ( auto &e : enemies ) {
+        float enemy_dist = std::sqrt( pow( player.position.x - e.position.x, 2 ) + pow( player.position.y - e.position.y, 2 ) );
+        e.dist_from_player = enemy_dist;
+    }
+
+    std::sort( enemies.begin(), enemies.end(), []( Enemy a, Enemy b ) {
+        return a.dist_from_player > b.dist_from_player;
+    } );
+
     for ( auto e : enemies ) {
         draw_rect( e.position.x * rect_w, e.position.y * rect_h, 5, 5, Color( 0xFF0000FF ) );
-        draw_sprite( e, depth_buffer );
+        draw_sprite( e );
     }
 }
 
@@ -164,19 +173,18 @@ void Engine::draw_rect( int x, int y, int w, int h, Color color ) {
     }
 }
 
-void Engine::draw_sprite( Enemy enemy, std::vector<float> depth_buffer ) {
+void Engine::draw_sprite( Enemy enemy ) {
     float dir = atan2( enemy.position.y - player.position.y, enemy.position.x - player.position.x );
     while ( dir - player.view_angle > M_PI ) dir -= 2 * M_PI;
     while ( dir - player.view_angle < -M_PI ) dir += 2 * M_PI;
 
-    float dist = std::sqrt( pow( player.position.x - enemy.position.x, 2 ) + pow( player.position.y - enemy.position.y, 2 ) );
-    size_t sprite_size = std::min( 1000, static_cast<int>( WINDOW_HEIGHT / dist ) );
+    size_t sprite_size = std::min( 1000, static_cast<int>( WINDOW_HEIGHT / enemy.dist_from_player ) );
     int h_offset = (dir - player.view_angle) / player.fov * (WINDOW_WIDTH / 2) + (WINDOW_WIDTH / 4) - (enemy_textures.get_size() / 2);
     int v_offset = WINDOW_HEIGHT / 2 - sprite_size / 2;
 
     for ( size_t i = 0; i < sprite_size; i++ ) {
         if ( h_offset + int(i) < 0 || h_offset + i >= WINDOW_WIDTH / 2 ) continue;
-        if ( depth_buffer[ h_offset + i ] < dist ) continue; // occlude sprite
+        if ( depth_buffer[ h_offset + i ] < enemy.dist_from_player ) continue; // occlude sprite
         for ( size_t j = 0; j < sprite_size; j++ ) {
             if ( v_offset + int(j) < 0 || v_offset + j >= WINDOW_HEIGHT ) continue;
             auto col = enemy_textures.get_pixel( i * enemy_textures.get_size() / sprite_size, j * enemy_textures.get_size() / sprite_size, enemy.tex_id );
