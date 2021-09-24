@@ -35,6 +35,8 @@ public:
     void draw_to_ppm( std::string path );
     void get_framebuffer( uint8_t* target );
 
+    void move_view( float delta );
+
 private:
     Color framebuffer[ FRAMEBUFFER_LENGTH ];
     std::vector<MapTile> map;

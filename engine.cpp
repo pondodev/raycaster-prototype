@@ -56,7 +56,6 @@ Engine::Engine( std::string map_path, std::string wall_tex_path, std::string ene
 }
 
 void Engine::update( float delta_time ) {
-    player.view_angle += .3 * delta_time;
 }
 
 void Engine::render() {
@@ -222,4 +221,8 @@ void Engine::draw_pixel( int x, int y, Color color ) {
 
 MapTile Engine::get_map_tile( int x, int y ) {
     return map[ x + y * map_width ];
+}
+
+void Engine::move_view( float delta ) {
+    player.view_angle += delta;
 }
