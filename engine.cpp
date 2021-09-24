@@ -55,6 +55,10 @@ Engine::Engine( std::string map_path, std::string wall_tex_path, std::string ene
     };
 }
 
+void Engine::update( float delta_time ) {
+    player.view_angle += .3 * delta_time;
+}
+
 void Engine::render() {
     clear_framebuffer( Color( 0xBBBBBBFF ) );
 
@@ -161,6 +165,17 @@ void Engine::draw_to_ppm( std::string path ) {
     }
 
     f.close();
+}
+
+void Engine::get_framebuffer( uint8_t* target ) {
+    for ( int i = 0; i < FRAMEBUFFER_LENGTH; i++ ) {
+        uint8_t r, g, b, a;
+        framebuffer[ i ].get_components( r, g, b, a );
+        target[ i * 4 ] = r;
+        target[ i * 4 + 1 ] = g;
+        target[ i * 4 + 2 ] = b;
+        target[ i * 4 + 3 ] = a;
+    }
 }
 
 void Engine::draw_rect( int x, int y, int w, int h, Color color ) {

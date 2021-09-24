@@ -5,7 +5,10 @@ full: build run
 fullclean: clean build run
 
 build:
-		g++ -o $(executable_name) *.cpp
+		g++ -o $(executable_name) *.cpp \
+		    -lsfml-graphics \
+			-lsfml-window \
+			-lsfml-system
 
 run:
 		./$(executable_name)

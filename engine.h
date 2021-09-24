@@ -30,8 +30,10 @@ enum MapTile {
 class Engine {
 public:
     Engine( std::string map_path, std::string wall_tex_path, std::string enemy_tex_path );
+    void update( float delta_time );
     void render();
     void draw_to_ppm( std::string path );
+    void get_framebuffer( uint8_t* target );
 
 private:
     Color framebuffer[ FRAMEBUFFER_LENGTH ];
