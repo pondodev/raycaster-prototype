@@ -57,3 +57,8 @@ std::vector<Color> Texture::get_column( size_t col_height, int tex_index, int te
 
     return column;
 }
+
+Color Texture::get_pixel( size_t x, size_t y, size_t index ) {
+    size_t w = size * count;
+    return pixels[ (index * size + x) + y * w ];
+}

@@ -28,6 +28,7 @@ enum MapTile {
 class Engine {
 public:
     Engine( std::string map_path, std::string wall_tex_path, std::string enemy_tex_path );
+    void render();
     void draw_to_ppm( std::string path );
 
 private:
@@ -40,8 +41,12 @@ private:
     Texture enemy_textures;
     std::vector<Enemy> enemies;
 
+    void clear_framebuffer( Color color );
     void draw_rect( int x, int y, int w, int h, Color color );
     void draw_sprite( Enemy enemy, std::vector<float> depth_buffer );
+    void draw_pixel( int x, int y, Color color );
+
+    MapTile get_map_tile( int x, int y );
 };
 
 #endif

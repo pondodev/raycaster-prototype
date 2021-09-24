@@ -52,15 +52,19 @@ Engine::Engine( std::string map_path, std::string wall_tex_path, std::string ene
         Enemy { Vec2 { 5.0, 10.0 }, 0 },
         Enemy { Vec2 { 5.5, 9.0 }, 0 }
     };
+}
+
+void Engine::render() {
+    clear_framebuffer( Color( 0xBBBBBBFF ) );
+
+    const size_t rect_w = WINDOW_WIDTH / (map_width * 2);
+    const size_t rect_h = WINDOW_HEIGHT / map_height;
 
     // draw map
-    int rect_w, rect_h;
-    rect_w = WINDOW_WIDTH / (map_width * 2);
-    rect_h = WINDOW_HEIGHT / map_height;
     for ( int y = 0; y < map_height; y++ ) {
         for ( int x = 0; x < map_width; x++ ) {
             Color col;
-            auto tile = map[ x + y * map_width ];
+            auto tile = get_map_tile( x, y );
             switch ( tile ) {
                 case Floor:
                     col = Color( 0xBBBBBBFF );
@@ -69,8 +73,7 @@ Engine::Engine( std::string map_path, std::string wall_tex_path, std::string ene
                 case Wall1:
                 case Wall2:
                 case Wall3:
-                    // get top left corner of texture
-                    col = wall_textures.get_column( wall_textures.get_size(), tile, 0 )[ 0 ];
+                    col = wall_textures.get_pixel( 0, 0, tile );
                     break;
 
                 default:
@@ -85,9 +88,6 @@ Engine::Engine( std::string map_path, std::string wall_tex_path, std::string ene
         }
     }
 
-    // clear the 3d view
-    draw_rect( WINDOW_WIDTH / 2, 0, WINDOW_WIDTH / 2, WINDOW_HEIGHT, Color( 0xBBBBBBFF ) );
-
     // draw view cone and 3d view
     std::vector<float> depth_buffer( WINDOW_WIDTH / 2, 1e3 );
     for ( float i = 0; i < WINDOW_WIDTH / 2; i++ ) {
@@ -96,35 +96,36 @@ Engine::Engine( std::string map_path, std::string wall_tex_path, std::string ene
             float cx = player.position.x + ray_dist * cos( angle );
             float cy = player.position.y + ray_dist * sin( angle );
 
+            // view cone
+            draw_pixel( cx * rect_w, cy * rect_h, Color( 0x5555DDFF ) );
+
             // the 3d magic!
-            auto tile = map[ int(cx) + int(cy) * map_width ];
-            if ( tile != Floor ) {
-                int column_height = WINDOW_HEIGHT / (ray_dist * cos(angle - player.view_angle));
-                float hit_x = cx - floor( cx + .5 );
-                float hit_y = cy - floor( cy + .5 );
-                int x_texcoord = hit_x * wall_textures.get_size();
-                if ( std::abs( hit_y ) > std::abs( hit_x ) ) { // check if vertical or horizontal wall
-                    x_texcoord = hit_y * wall_textures.get_size();
-                }
+            auto tile = get_map_tile( int(cx), int(cy) );
+            if ( tile == Floor ) continue; // skip empty space
 
-                if ( x_texcoord < 0 ) x_texcoord += wall_textures.get_size();
+            float dist = ray_dist * cos( angle - player.view_angle );
+            depth_buffer[ i ] = dist;
+            int column_height = WINDOW_HEIGHT / dist;
 
-                depth_buffer[ i ] = ray_dist * cos( angle - player.view_angle );
-                auto column = wall_textures.get_column( column_height, tile, x_texcoord );
-                int pixel_x = WINDOW_WIDTH / 2 + i;
-                for ( int j = 0; j < column_height; j++ ) {
-                    int pixel_y = j + WINDOW_HEIGHT / 2 - column_height / 2;
-                    if ( pixel_y < 0 || pixel_y >= WINDOW_HEIGHT ) continue;
-                    framebuffer[ pixel_x + pixel_y * WINDOW_WIDTH ] = column[ j ];
-                }
-
-                break;
+            // wall texturing
+            float hit_x = cx - floor( cx + .5 );
+            float hit_y = cy - floor( cy + .5 );
+            int x_texcoord = hit_x * wall_textures.get_size();
+            if ( std::abs( hit_y ) > std::abs( hit_x ) ) { // check if vertical or horizontal wall
+                x_texcoord = hit_y * wall_textures.get_size();
             }
 
-            int pixel_x, pixel_y;
-            pixel_x = cx * rect_w;
-            pixel_y = cy * rect_h;
-            framebuffer[ pixel_x + pixel_y * WINDOW_WIDTH ] = Color( 0x5555DDFF );
+            if ( x_texcoord < 0 ) x_texcoord += wall_textures.get_size();
+
+            auto column = wall_textures.get_column( column_height, tile, x_texcoord );
+            int pixel_x = i + WINDOW_WIDTH / 2;
+            for ( size_t j = 0; j < column_height; j++ ) {
+                int pixel_y = j + WINDOW_HEIGHT / 2 - column_height / 2;
+                if ( pixel_y < 0 || pixel_y >= WINDOW_HEIGHT ) continue;
+                draw_pixel( pixel_x, pixel_y, column[ j ] );
+            }
+
+            break;
         }
     }
 
@@ -158,7 +159,7 @@ void Engine::draw_rect( int x, int y, int w, int h, Color color ) {
         for ( int j = 0; j < h; j++ ) {
             int cx = x + i;
             int cy = y + j;
-            framebuffer[ cx + cy * WINDOW_WIDTH ] = color;
+            draw_pixel( cx, cy, color );
         }
     }
 }
@@ -168,20 +169,34 @@ void Engine::draw_sprite( Enemy enemy, std::vector<float> depth_buffer ) {
     while ( dir - player.view_angle > M_PI ) dir -= 2 * M_PI;
     while ( dir - player.view_angle < -M_PI ) dir += 2 * M_PI;
 
-    float dist = sqrt( pow( player.position.x - enemy.position.x, 2 ) ) + pow( player.position.y - enemy.position.y, 2 );
-    size_t size = std::min( 2000, static_cast<int>( WINDOW_HEIGHT / dist ) );
-    int h_offset = (dir - player.view_angle) * (WINDOW_WIDTH / 2) / player.fov + (WINDOW_WIDTH / 2) / 2 - size / 2;
-    int v_offset = WINDOW_HEIGHT / 2 - size / 2;
+    float dist = std::sqrt( pow( player.position.x - enemy.position.x, 2 ) + pow( player.position.y - enemy.position.y, 2 ) );
+    size_t sprite_size = std::min( 1000, static_cast<int>( WINDOW_HEIGHT / dist ) );
+    int h_offset = (dir - player.view_angle) / player.fov * (WINDOW_WIDTH / 2) + (WINDOW_WIDTH / 4) - (enemy_textures.get_size() / 2);
+    int v_offset = WINDOW_HEIGHT / 2 - sprite_size / 2;
 
-    for ( int i = 0; i < size; i++ ) {
-        if ( h_offset + i < 0 || h_offset + i >= WINDOW_WIDTH / 2 ) continue;
+    for ( size_t i = 0; i < sprite_size; i++ ) {
+        if ( h_offset + int(i) < 0 || h_offset + i >= WINDOW_WIDTH / 2 ) continue;
         if ( depth_buffer[ h_offset + i ] < dist ) continue; // occlude sprite
-        for ( int j = 0; j < size; j++ ) {
-            if ( v_offset + j < 0 || v_offset + j >= WINDOW_HEIGHT ) continue;
+        for ( size_t j = 0; j < sprite_size; j++ ) {
+            if ( v_offset + int(j) < 0 || v_offset + j >= WINDOW_HEIGHT ) continue;
+            auto col = enemy_textures.get_pixel( i * enemy_textures.get_size() / sprite_size, j * enemy_textures.get_size() / sprite_size, enemy.tex_id );
+            if ( (col.get_hex() & 0x000000FF) < 0x00000080 ) continue; // very simple alpha culling
             int x, y;
             x = WINDOW_WIDTH / 2 + h_offset + i;
             y = v_offset + j;
-            framebuffer[ x + y * WINDOW_WIDTH ] = Color( 0x000000FF );
+            draw_pixel( x, y, col );
         }
     }
+}
+
+void Engine::clear_framebuffer( Color color ) {
+    draw_rect( 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, color );
+}
+
+void Engine::draw_pixel( int x, int y, Color color ) {
+    framebuffer[ x + y * WINDOW_WIDTH ] = color;
+}
+
+MapTile Engine::get_map_tile( int x, int y ) {
+    return map[ x + y * map_width ];
 }
