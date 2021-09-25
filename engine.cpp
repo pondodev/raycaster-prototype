@@ -66,9 +66,24 @@ void Engine::update( float delta_time ) {
     };
 
     // apply player movement
-    player.position += (forward * player.move_dir.y
-                      + right * player.move_dir.x)
-                      * delta_time;
+    auto old_pos = player.position;
+    auto move_vec = forward * player.move_dir.y * delta_time;
+    move_vec += right * player.move_dir.x * delta_time;
+    player.position += move_vec;
+
+    if ( get_map_tile( int(player.position.x), int(old_pos.y) ) != Floor ) {
+        float wall_start = floor( player.position.x );
+        if ( move_vec.x < float(0) ) wall_start += 1.0;
+        else wall_start -= 0.01;
+        player.position.x += wall_start - player.position.x;
+    }
+
+    if ( get_map_tile( int(old_pos.x), int(player.position.y) ) != Floor ) {
+        float wall_start = floor( player.position.y );
+        if ( move_vec.y < 0 ) wall_start += 1.0;
+        else wall_start -= 0.01;
+        player.position.y += wall_start - player.position.y;
+    }
 }
 
 void Engine::render() {
@@ -215,6 +230,7 @@ void Engine::draw_sprite( Enemy enemy ) {
 
     size_t sprite_size = std::min( 1000, static_cast<int>( WINDOW_HEIGHT / enemy.dist_from_player ) );
     int h_offset = (dir - player.view_angle) / player.fov * (WINDOW_WIDTH / 2) + (WINDOW_WIDTH / 4) - (enemy_textures.get_size() / 2);
+    h_offset -= sprite_size / 2; // center the sprite
     int v_offset = WINDOW_HEIGHT / 2 - sprite_size / 2;
 
     for ( size_t i = 0; i < sprite_size; i++ ) {
