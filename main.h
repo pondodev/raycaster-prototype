@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "engine.h"
+#include "vec2.h"
 
 void input();
 void update();

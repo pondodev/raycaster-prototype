@@ -1,18 +1,20 @@
 #include "vec2.h"
 
 Vec2 Vec2::normalised() {
+    if ( x == 0 && y == 0 ) return *this; // catch vectors of length 0
+
     return *this / magnitude();
 }
 
 float Vec2::magnitude() {
-    return std::sqrt(x*x + y*y);
+    return std::sqrt( x*x + y*y );
 }
 
 Vec2 Vec2::abs() {
     Vec2 v;
 
-    v.x = std::abs(x);
-    v.y = std::abs(y);
+    v.x = std::abs( x );
+    v.y = std::abs( y );
 
     return v;
 }

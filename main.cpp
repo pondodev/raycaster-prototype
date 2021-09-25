@@ -6,6 +6,7 @@ sf::Vector2i window_center;
 sf::Texture render_texture;
 sf::Sprite render_sprite;
 sf::Clock delta_clock;
+Vec2 move_dir;
 
 int main() {
     window = new sf::RenderWindow(
@@ -35,6 +36,8 @@ int main() {
 }
 
 void input() {
+    move_dir = Vec2 { 0.0, 0.0 };
+
     sf::Event event;
     while ( window->pollEvent( event ) ) {
         if ( event.type == sf::Event::Closed )
@@ -44,16 +47,28 @@ void input() {
             handle_key_down( event.key.code );
     }
 
+    // movement input
+    if ( sf::Keyboard::isKeyPressed( sf::Keyboard::Key::W ) )
+        move_dir.y += 1.0;
+    if ( sf::Keyboard::isKeyPressed( sf::Keyboard::Key::S ) )
+        move_dir.y += -1.0;
+    if ( sf::Keyboard::isKeyPressed( sf::Keyboard::Key::A ) )
+        move_dir.x += 1.0;
+    if ( sf::Keyboard::isKeyPressed( sf::Keyboard::Key::D ) )
+        move_dir.x += -1.0;
+
     // mouse move
-    int mouse_delta = event.mouseMove.x - window_center.x;
+    int mouse_x = sf::Mouse::getPosition( *window ).x;
+    int mouse_delta = mouse_x - window_center.x;
     if ( abs(mouse_delta) > 0 ) {
         sf::Mouse::setPosition( window_center, *window );
-        engine.move_view( mouse_delta * .001 );
+        engine.move_view( mouse_delta * .001 ); // TODO: magic number
     }
 }
 
 void update() {
     auto delta_time = delta_clock.restart().asSeconds();
+    engine.set_player_move_dir( move_dir.normalised() * 2 ); // TODO: magic number
     engine.update( delta_time );
 }
 

@@ -36,6 +36,7 @@ public:
     void get_framebuffer( uint8_t* target );
 
     void move_view( float delta );
+    void set_player_move_dir( Vec2 dir );
 
 private:
     Color framebuffer[ FRAMEBUFFER_LENGTH ];

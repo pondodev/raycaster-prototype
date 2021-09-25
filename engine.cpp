@@ -56,6 +56,19 @@ Engine::Engine( std::string map_path, std::string wall_tex_path, std::string ene
 }
 
 void Engine::update( float delta_time ) {
+    Vec2 forward = Vec2 {
+        std::cos( player.view_angle ),
+        std::sin( player.view_angle )
+    };
+    Vec2 right = Vec2 {
+        std::cos( player.view_angle - float(M_PI / 2.0) ),
+        std::sin( player.view_angle - float(M_PI / 2.0) )
+    };
+
+    // apply player movement
+    player.position += (forward * player.move_dir.y
+                      + right * player.move_dir.x)
+                      * delta_time;
 }
 
 void Engine::render() {
@@ -177,6 +190,14 @@ void Engine::get_framebuffer( uint8_t* target ) {
     }
 }
 
+void Engine::move_view( float delta ) {
+    player.view_angle += delta;
+}
+
+void Engine::set_player_move_dir( Vec2 dir ) {
+    player.move_dir = dir;
+}
+
 void Engine::draw_rect( int x, int y, int w, int h, Color color ) {
     for ( int i = 0; i < w; i++ ) {
         for ( int j = 0; j < h; j++ ) {
@@ -221,8 +242,4 @@ void Engine::draw_pixel( int x, int y, Color color ) {
 
 MapTile Engine::get_map_tile( int x, int y ) {
     return map[ x + y * map_width ];
-}
-
-void Engine::move_view( float delta ) {
-    player.view_angle += delta;
 }
